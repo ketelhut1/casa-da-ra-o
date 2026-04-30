@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pedido confirmado | Casa das Rações Isa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./compra.css" />
+</head>
+<body>
+  <main class="layout" style="grid-template-columns: minmax(0, 760px); justify-content:center; margin-top: 2rem;">
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Pedido confirmado</h3>
+        <a class="details-btn" href="./compra.html" style="text-decoration:none; display:inline-block;">Voltar à loja</a>
+      </div>
+      <p class="muted">Seu pedido foi registrado com sucesso.</p>
+      <div id="orderProgress"></div>
+      <div id="orderSummary"></div>
+      <div class="confirm-actions">
+        <a id="historyBtn" class="details-btn" href="./compra.html#orders" style="text-decoration:none; display:inline-block;">Acompanhar no histórico</a>
+        <a id="whatsBtn" class="details-btn" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:inline-block;">Falar no WhatsApp</a>
+      </div>
+    </section>
+  </main>
+  <script src="./confirmacao.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login Admin | Casa das Rações Isa</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <section class="login-screen">
+    <div class="login-card">
+      <h1>Painel administrativo</h1>
+      <p>Entre com o usuário administrador para gerenciar pedidos e produtos.</p>
+      <form id="loginForm" class="login-form">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" value="admin@casadasracoes.local" required />
+        <label for="password">Senha</label>
+        <input id="password" type="password" required />
+        <button type="submit">Entrar</button>
+      </form>
+      <p id="loginFeedback" class="feedback" aria-live="polite"></p>
+      <p class="hint">Login inicial: <strong>admin@casadasracoes.local</strong> / <strong>1234</strong></p>
+    </div>
+  </section>
+  <script src="login.js"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel Admin | Casa das Rações Isa</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="header-inner">
+        <div>
+          <h2>Casa das Rações Isa</h2>
+          <p>Painel para catálogo, pedidos e atualização de status.</p>
+        </div>
+        <div class="header-actions">
+          <span id="adminUser"></span>
+          <button type="button" id="logoutBtn">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main admin-layout">
+      <aside class="panel nav-panel">
+        <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="nav-btn" data-tab="orders">Pedidos</button>
+        <button class="nav-btn" data-tab="products">Produtos</button>
+        <button class="nav-btn" data-tab="clients">Clientes</button>
+        <button class="nav-btn" data-tab="settings">Configurações</button>
+      </aside>
+
+      <section class="panel tab-panel" id="tab-dashboard">
+        <div class="section-head">
+          <h3>Dashboard</h3>
+          <button type="button" id="refreshDashboardBtn">Atualizar</button>
+        </div>
+        <div class="cards-list metric-grid" id="dashboardMetrics"></div>
+      </section>
+
+      <section class="panel tab-panel hidden" id="tab-orders">
+        <div class="section-head">
+          <h3>Pedidos</h3>
+          <div class="inline-actions">
+            <select id="statusFilter">
+              <option value="">Todos os status</option>
+              <option value="novo">Novo</option>
+              <option value="em_preparo">Em preparo</option>
+              <option value="enviado">Enviado</option>
+              <option value="concluido">Concluído</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+            <button type="button" id="refreshOrdersBtn">Atualizar</button>
+          </div>
+        </div>
+        <div id="ordersList" class="cards-list"></div>
+      </section>
+
+      <section class="panel tab-panel hidden" id="tab-products">
+        <div class="section-head">
+          <h3>Catálogo</h3>
+          <button type="button" id="refreshProductsBtn">Recarregar</button>
+        </div>
+
+        <form id="productForm" class="product-form">
+          <input type="hidden" id="productId" />
+          <label for="codigo">Código</label>
+          <input id="codigo" type="text" required />
+          <label for="descricao">Descrição</label>
+          <input id="descricao" type="text" required />
+          <label for="custo">Preço</label>
+          <input id="custo" type="text" placeholder="0,00" />
+          <label for="saldo">Saldo</label>
+          <input id="saldo" type="text" />
+          <label for="total">Total</label>
+          <input id="total" type="text" />
+          <label for="imageUrl">URL da imagem</label>
+          <input id="imageUrl" type="url" />
+          <label for="categoria">Categoria</label>
+          <select id="categoria">
+            <option value="cao">Cães</option>
+            <option value="gato">Gatos</option>
+            <option value="outro">Outros</option>
+          </select>
+          <label class="checkbox-row">
+            <input id="ativo" type="checkbox" checked />
+            Produto ativo
+          </label>
+          <div class="inline-actions full-width">
+            <button type="submit">Salvar produto</button>
+            <button type="button" id="resetFormBtn" class="secondary-btn">Novo produto</button>
+          </div>
+        </form>
+        <p id="productFeedback" class="feedback" aria-live="polite"></p>
+
+        <div class="toolbar">
+          <input id="productSearch" type="search" placeholder="Buscar produto..." />
+        </div>
+        <div id="productsList" class="cards-list"></div>
+      </section>
+
+      <section class="panel tab-panel hidden" id="tab-clients">
+        <div class="section-head">
+          <h3>Clientes</h3>
+          <button type="button" id="refreshClientsBtn">Atualizar</button>
+        </div>
+        <div class="toolbar">
+          <input id="clientSearch" type="search" placeholder="Buscar cliente por nome, e-mail, telefone ou CPF..." />
+        </div>
+        <div id="clientsList" class="cards-list"></div>
+      </section>
+
+      <section class="panel tab-panel hidden" id="tab-settings">
+        <div class="section-head">
+          <h3>Configurações da loja</h3>
+          <button type="button" id="refreshSettingsBtn">Recarregar</button>
+        </div>
+        <form id="settingsForm" class="product-form">
+          <label for="storeName">Nome da loja</label>
+          <input id="storeName" type="text" required />
+          <label for="storePhone">Telefone</label>
+          <input id="storePhone" type="text" />
+          <label for="storeEmail">E-mail</label>
+          <input id="storeEmail" type="email" />
+          <label for="defaultShipping">Frete padrão</label>
+          <input id="defaultShipping" type="text" placeholder="0,00" />
+          <label for="citiesTextarea">Cidades atendidas (uma por linha, use |obrigatorio quando exigir cadastro)</label>
+          <textarea id="citiesTextarea" rows="8" class="full-width" placeholder="Exemplo:&#10;Três Lagoas - MS|obrigatorio&#10;Andradina - SP"></textarea>
+          <div class="inline-actions full-width">
+            <button type="submit">Salvar configurações</button>
+          </div>
+        </form>
+        <p id="settingsFeedback" class="feedback" aria-live="polite"></p>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

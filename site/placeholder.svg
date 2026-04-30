@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0f4f8"/>
+      <stop offset="100%" style="stop-color:#d8e2ec"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#g)"/>
+  <path fill="#c4d4e0" d="M120 80h160l24 40v220H96V120l24-40z"/>
+  <path fill="#a8bcc9" d="M144 100h112l16 28v196H128V128l16-28z"/>
+  <ellipse cx="200" cy="95" rx="50" ry="18" fill="#8fa5b5"/>
+  <text x="200" y="230" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#5a6d7d">Adicione foto em</text>
+  <text x="200" y="252" text-anchor="middle" font-family="system-ui,monospace" font-size="13" fill="#3d4f5f">images/CODIGO.jpg</text>
+</svg>

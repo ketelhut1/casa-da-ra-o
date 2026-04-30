@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | Casa das Rações Isa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./auth.css" />
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-card">
+      <div class="brand">
+        <img src="logo-casa-racao.png" alt="Casa das Rações Isa" />
+        <div>
+          <h1>Casa das Rações Isa</h1>
+          <p>Volte ao carrinho e finalize seu pedido.</p>
+        </div>
+      </div>
+
+      <div class="auth-intro">
+        <h2>Faça login para continuar</h2>
+        <p id="loginNotice">Acesse sua conta para retornar à loja com o carrinho preservado.</p>
+      </div>
+
+      <form id="loginForm" class="auth-form">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" required />
+        <label for="password">Senha</label>
+        <input id="password" type="password" required />
+        <button type="submit">Entrar</button>
+      </form>
+
+      <p id="feedback" class="feedback" aria-live="polite"></p>
+
+      <nav class="auth-nav">
+        <a href="./cadastro.html">Nao tem conta? Cadastre-se</a>
+        <a class="secondary" href="./compra.html">Voltar à loja</a>
+      </nav>
+    </section>
+  </main>
+
+  <script src="./login.js"></script>
+</body>
+</html>

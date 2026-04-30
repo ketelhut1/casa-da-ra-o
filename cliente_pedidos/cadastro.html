@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro | Casa das Rações Isa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./auth.css" />
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-card">
+      <div class="brand">
+        <img src="logo-casa-racao.png" alt="Casa das Rações Isa" />
+        <div>
+          <h1>Casa das Rações Isa</h1>
+          <p>Cadastre-se para liberar o pedido e manter seus dados salvos.</p>
+        </div>
+      </div>
+
+      <div class="auth-intro">
+        <h2>Cadastro rápido</h2>
+        <p id="registerNotice">Complete seu cadastro para concluir a compra com segurança.</p>
+      </div>
+
+      <form id="registerForm" class="auth-form">
+        <label for="name">Nome</label>
+        <input id="name" type="text" required />
+        <label for="cpf">CPF</label>
+        <input id="cpf" type="text" required />
+        <label for="email">E-mail</label>
+        <input id="email" type="email" required />
+        <label for="address">Endereço</label>
+        <input id="address" type="text" required />
+        <label for="city">Cidade/Bairro</label>
+        <select id="city" required>
+          <option value="">Selecione</option>
+          <option value="Praia">Praia</option>
+          <option value="Morada do Sol">Morada do Sol</option>
+          <option value="Recanto das Aguas">Recanto das Aguas</option>
+          <option value="Cinturao Verde">Cinturao Verde</option>
+          <option value="Ipe">Ipe</option>
+        </select>
+        <label for="phone">Telefone</label>
+        <input id="phone" type="text" required />
+        <label for="password">Senha</label>
+        <input id="password" type="password" required />
+        <button type="submit">Cadastrar</button>
+      </form>
+
+      <p id="feedback" class="feedback" aria-live="polite"></p>
+
+      <nav class="auth-nav">
+        <a href="./login.html">Ja tenho conta</a>
+        <a class="secondary" href="./compra.html">Voltar à loja</a>
+      </nav>
+    </section>
+  </main>
+
+  <script src="./cadastro.js"></script>
+</body>
+</html>

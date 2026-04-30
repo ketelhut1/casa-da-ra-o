@@ -1,0 +1,25 @@
+Login inicial do admin
+E-mail: admin@casadasracoes.local
+Senha: 1234
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*\faça a premiera pagina a de login so apos o loguin que ira para a pagina de compras  caso o clinete não tenha loguin ele tera que fazer o cadastro no sistema   
+
+no cadastro do cliente ele precisa ter nome 
+cpf 
+endereço 
+numero de telefone 
+forma de pagamento/*
+

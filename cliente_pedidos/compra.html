@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compras | Casa das Rações Isa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./compra.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <img src="logo-casa-racao.png" alt="Casa das Rações Isa" />
+        <div>
+          <h1>Casa das Rações Isa</h1>
+          <p>Descubra rações, monte seu carrinho e finalize o pedido.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="userBox">Visitante</span>
+        <button id="logoutBtn" class="hidden" type="button">Sair</button>
+      </div>
+    </div>
+    <div class="header-banner hidden" id="authNotice">
+      Você está navegando como visitante. Faça login para finalizar o pedido.
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="catalog">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Buscar produtos..." />
+        <select id="categoryFilter">
+          <option value="all">Todas categorias</option>
+          <option value="cao">Cães</option>
+          <option value="gato">Gatos</option>
+          <option value="outro">Outros</option>
+        </select>
+        <span id="productCount">Carregando...</span>
+      </div>
+      <div id="productGrid" class="product-grid"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Carrinho</h3>
+          <button id="clearCartBtn" type="button">Limpar</button>
+        </div>
+        <div id="cartItems"></div>
+        <label for="customerName">Nome</label>
+        <input id="customerName" type="text" />
+        <label for="customerPhone">Telefone</label>
+        <input id="customerPhone" type="text" />
+        <label for="customerAddress">Endereço</label>
+        <input id="customerAddress" type="text" />
+        <label for="customerCity">Cidade</label>
+        <select id="customerCity">
+          <option value="">Selecione a cidade</option>
+        </select>
+        <p id="cityRuleNotice" class="muted"></p>
+        <label for="paymentMethod">Forma de pagamento</label>
+        <select id="paymentMethod" required>
+          <option value="">Selecione</option>
+          <option value="pix">PIX</option>
+          <option value="cartao">Cartão</option>
+          <option value="dinheiro">Dinheiro</option>
+        </select>
+        <label for="orderNotes">Observacoes</label>
+        <textarea id="orderNotes" rows="3"></textarea>
+        <div id="cartTotal" class="cart-total">Total: R$ 0,00</div>
+        <button id="checkoutBtn" type="button">Finalizar pedido</button>
+        <p id="feedback" class="feedback" aria-live="polite"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Historico</h3>
+          <button id="refreshOrdersBtn" type="button">Atualizar</button>
+        </div>
+        <div id="ordersList"></div>
+      </section>
+
+      <section class="panel hidden" id="adminPanel">
+        <div class="panel-head">
+          <h3>Gerenciar produtos</h3>
+        </div>
+        <form id="adminProductForm" class="admin-form">
+          <input id="adminProductId" type="hidden" />
+          <label for="adminCodigo">Codigo</label>
+          <input id="adminCodigo" type="text" required />
+          <label for="adminDescricao">Descricao</label>
+          <input id="adminDescricao" type="text" required />
+          <label for="adminCusto">Valor</label>
+          <input id="adminCusto" type="text" placeholder="0,00" />
+          <label for="adminCategoria">Categoria</label>
+          <select id="adminCategoria">
+            <option value="cao">Cães</option>
+            <option value="gato">Gatos</option>
+            <option value="outro">Outros</option>
+          </select>
+          <label for="adminImageUrl">Foto (URL)</label>
+          <input id="adminImageUrl" type="url" placeholder="https://..." />
+          <label for="adminImageFile">Ou enviar foto do computador</label>
+          <input id="adminImageFile" type="file" accept="image/*" />
+          <label class="admin-checkbox">
+            <input id="adminAtivo" type="checkbox" checked />
+            Produto ativo
+          </label>
+          <div class="admin-actions">
+            <button type="submit">Salvar</button>
+            <button id="adminNewBtn" type="button">Novo</button>
+            <button id="adminDeleteBtn" type="button" class="danger">Remover</button>
+          </div>
+        </form>
+        <p id="adminFeedback" class="feedback" aria-live="polite"></p>
+      </section>
+    </aside>
+  </main>
+
+  <script src="./compra.js"></script>
+</body>
+</html>

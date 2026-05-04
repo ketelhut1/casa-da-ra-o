@@ -34,15 +34,16 @@
         <input id="email" type="email" required />
         <label for="address">Endereço</label>
         <input id="address" type="text" required />
-        <label for="city">Cidade/Bairro</label>
+        <label for="city">Cidade</label>
         <select id="city" required>
-          <option value="">Selecione</option>
-          <option value="Praia">Praia</option>
-          <option value="Morada do Sol">Morada do Sol</option>
-          <option value="Recanto das Aguas">Recanto das Aguas</option>
-          <option value="Cinturao Verde">Cinturao Verde</option>
-          <option value="Ipe">Ipe</option>
+          <option value="">Selecione a cidade</option>
         </select>
+        <div id="neighborhoodWrap" class="hidden">
+          <label for="neighborhood">Bairro</label>
+          <select id="neighborhood" aria-required="false">
+            <option value="">Selecione o bairro</option>
+          </select>
+        </div>
         <label for="phone">Telefone</label>
         <input id="phone" type="text" required />
         <label for="password">Senha</label>

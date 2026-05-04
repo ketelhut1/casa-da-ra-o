@@ -51,6 +51,9 @@ function create_schema(PDO $pdo): void
     if (!in_array('city', $columns, true)) {
         $pdo->exec('ALTER TABLE users ADD COLUMN city TEXT DEFAULT ""');
     }
+    if (!in_array('neighborhood', $columns, true)) {
+        $pdo->exec('ALTER TABLE users ADD COLUMN neighborhood TEXT DEFAULT ""');
+    }
     if (!in_array('payment_method', $columns, true)) {
         $pdo->exec('ALTER TABLE users ADD COLUMN payment_method TEXT DEFAULT ""');
     }
@@ -155,8 +158,8 @@ function seed_guest_user(PDO $pdo): void
     }
 
     $insert = $pdo->prepare(
-        'INSERT INTO users (name, email, password_hash, phone, cpf, address, city, is_admin)
-         VALUES (:name, :email, :password_hash, :phone, :cpf, :address, :city, 0)'
+        'INSERT INTO users (name, email, password_hash, phone, cpf, address, city, neighborhood, is_admin)
+         VALUES (:name, :email, :password_hash, :phone, :cpf, :address, :city, :neighborhood, 0)'
     );
     $insert->execute([
         'name' => 'Visitante',
@@ -166,6 +169,7 @@ function seed_guest_user(PDO $pdo): void
         'cpf' => '',
         'address' => '',
         'city' => '',
+        'neighborhood' => '',
     ]);
 }
 

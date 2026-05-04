@@ -15,6 +15,8 @@
   const customerPhoneEl = document.getElementById("customerPhone");
   const customerAddressEl = document.getElementById("customerAddress");
   const customerCityEl = document.getElementById("customerCity");
+  const customerNeighborhoodWrapEl = document.getElementById("customerNeighborhoodWrap");
+  const customerNeighborhoodEl = document.getElementById("customerNeighborhood");
   const cityRuleNoticeEl = document.getElementById("cityRuleNotice");
   const paymentMethodEl = document.getElementById("paymentMethod");
   const orderNotesEl = document.getElementById("orderNotes");
@@ -37,12 +39,41 @@
   const adminNewBtnEl = document.getElementById("adminNewBtn");
   const adminDeleteBtnEl = document.getElementById("adminDeleteBtn");
   const adminFeedbackEl = document.getElementById("adminFeedback");
-  const FIXED_CITY_SHIPPING = {
+  const ILHA_SOLTEIRA_NORM = "ilha solteira";
+  const ILHA_BAIRROS = [
+    "Morada do Sol",
+    "Zona Sul",
+    "Zona Norte",
+    "Ipê",
+    "Praia",
+    "Cinturão Verde",
+    "Jardim Aeroporto",
+    "Novo Horizonte",
+    "Ilha do Sol",
+    "Nova Ilha",
+    "Ilha Bela",
+    "Santa Catarina",
+    "Morumbi",
+    "Coabi",
+    "Portal do Bosque",
+  ];
+  const FIXED_LOCALITY_SHIPPING = {
     praia: 5,
     "morada do sol": 5,
     "recanto das aguas": 5,
     "cinturao verde": 5,
     ipe: 8,
+    "zona sul": 5,
+    "zona norte": 5,
+    "jardim aeroporto": 5,
+    "novo horizonte": 5,
+    "ilha do sol": 5,
+    "nova ilha": 5,
+    "ilha bela": 5,
+    "santa catarina": 5,
+    morumbi: 5,
+    coabi: 5,
+    "portal do bosque": 5,
   };
 
   let currentUser = null;
@@ -95,10 +126,42 @@
     return (value || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim();
   }
 
-  function calculateShippingFee(cityName, subtotal) {
-    const cityKey = normalizeName(cityName);
-    if (cityKey && Object.prototype.hasOwnProperty.call(FIXED_CITY_SHIPPING, cityKey)) {
-      return FIXED_CITY_SHIPPING[cityKey];
+  function isIlhaSolteiraCity(cityName) {
+    return normalizeName(cityName) === ILHA_SOLTEIRA_NORM;
+  }
+
+  function fillCheckoutNeighborhoodOptions() {
+    if (!customerNeighborhoodEl) return;
+    customerNeighborhoodEl.innerHTML = '<option value="">Selecione o bairro</option>';
+    ILHA_BAIRROS.forEach((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      customerNeighborhoodEl.appendChild(option);
+    });
+  }
+
+  function syncCheckoutNeighborhoodUi() {
+    if (!customerNeighborhoodWrapEl || !customerNeighborhoodEl) return;
+    const show = isIlhaSolteiraCity(customerCityEl?.value || "");
+    customerNeighborhoodWrapEl.classList.toggle("hidden", !show);
+    customerNeighborhoodEl.disabled = !show;
+    customerNeighborhoodEl.required = show;
+    if (!show) customerNeighborhoodEl.value = "";
+  }
+
+  function resolveShippingLocality(cityName, neighborhoodName) {
+    const city = (cityName || "").trim();
+    if (isIlhaSolteiraCity(city) && (neighborhoodName || "").trim()) {
+      return neighborhoodName.trim();
+    }
+    return city;
+  }
+
+  function calculateShippingFee(cityName, subtotal, neighborhoodName) {
+    const key = normalizeName(resolveShippingLocality(cityName, neighborhoodName));
+    if (key && Object.prototype.hasOwnProperty.call(FIXED_LOCALITY_SHIPPING, key)) {
+      return FIXED_LOCALITY_SHIPPING[key];
     }
     return subtotal < 20 ? 2.5 : 0;
   }
@@ -142,6 +205,10 @@
     customerPhoneEl.value = currentUser.phone || customerPhoneEl.value;
     customerAddressEl.value = currentUser.address || customerAddressEl.value;
     customerCityEl.value = currentUser.city || customerCityEl.value;
+    if (customerNeighborhoodEl && isIlhaSolteiraCity(customerCityEl.value)) {
+      customerNeighborhoodEl.value = currentUser.neighborhood || "";
+    }
+    syncCheckoutNeighborhoodUi();
     updateCityRuleNotice();
   }
 
@@ -238,7 +305,11 @@
       line.appendChild(removeBtn);
       cartItemsEl.appendChild(line);
     });
-    const shippingFee = calculateShippingFee(customerCityEl?.value || "", total);
+    const shippingFee = calculateShippingFee(
+      customerCityEl?.value || "",
+      total,
+      customerNeighborhoodEl?.value || "",
+    );
     const totalWithShipping = total + shippingFee;
     cartTotalEl.innerHTML = `Subtotal: ${formatMoney(total)}<br>Taxa de entrega: ${formatMoney(shippingFee)}<br><strong>Total: ${formatMoney(totalWithShipping)}</strong>`;
   }
@@ -332,13 +403,6 @@
     const data = await api("public-store-settings");
     storeSettings = data.settings || { cities: [] };
     const cities = Array.isArray(storeSettings.cities) ? [...storeSettings.cities] : [];
-    const requiredCities = ["Praia", "Morada do Sol", "Recanto das Aguas", "Cinturao Verde", "Ipe"];
-    const existing = new Set(cities.map((entry) => normalizeName(entry?.name || "")));
-    requiredCities.forEach((name) => {
-      if (!existing.has(normalizeName(name))) {
-        cities.push({ name, require_registration: false });
-      }
-    });
     customerCityEl.innerHTML = '<option value="">Selecione a cidade</option>';
     cities.forEach((city) => {
       const option = document.createElement("option");
@@ -347,6 +411,7 @@
       customerCityEl.appendChild(option);
     });
     fillCheckoutFromUser();
+    syncCheckoutNeighborhoodUi();
     renderCart();
     updateCityRuleNotice();
   }
@@ -375,8 +440,13 @@
     const customerPhone = customerPhoneEl.value.trim();
     const customerAddress = customerAddressEl.value.trim();
     const customerCity = customerCityEl.value.trim();
+    const customerNeighborhood = (customerNeighborhoodEl?.value || "").trim();
     if (!customerName || !customerPhone || !customerAddress || !customerCity) {
       setFeedback("Preencha nome, telefone, endereço e cidade.", true);
+      return;
+    }
+    if (isIlhaSolteiraCity(customerCity) && !customerNeighborhood) {
+      setFeedback("Selecione o bairro em Ilha Solteira.", true);
       return;
     }
     if (!currentUser && cityRequiresRegistration(customerCity)) {
@@ -399,11 +469,18 @@
           customer_phone: customerPhone,
           customer_address: customerAddress,
           customer_city: customerCity,
+          customer_neighborhood: isIlhaSolteiraCity(customerCity) ? customerNeighborhood : "",
           notes: orderNotesEl.value.trim(),
           items: cart.map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
         }),
       });
       const orderId = result.order_id;
+      const subtotalPre = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+      const shipPre = calculateShippingFee(customerCity, subtotalPre, customerNeighborhood);
+      const cityLabel =
+        isIlhaSolteiraCity(customerCity) && customerNeighborhood
+          ? `Ilha Solteira — ${customerNeighborhood}`
+          : customerCity;
       localStorage.setItem("casa_last_order", JSON.stringify({
         id: orderId,
         status: "novo",
@@ -412,12 +489,11 @@
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_address: customerAddress,
-        customer_city: customerCity,
+        customer_city: cityLabel,
         notes: orderNotesEl.value.trim(),
-        subtotal_amount: cart.reduce((sum, i) => sum + (i.price * i.quantity), 0),
-        shipping_fee: calculateShippingFee(customerCity, cart.reduce((sum, i) => sum + (i.price * i.quantity), 0)),
-        total_amount: cart.reduce((sum, i) => sum + (i.price * i.quantity), 0)
-          + calculateShippingFee(customerCity, cart.reduce((sum, i) => sum + (i.price * i.quantity), 0)),
+        subtotal_amount: subtotalPre,
+        shipping_fee: shipPre,
+        total_amount: subtotalPre + shipPre,
         items: cart.map((i) => ({ product_name: i.descricao, quantity: i.quantity, line_total: i.price * i.quantity })),
       }));
       cart = [];
@@ -440,8 +516,12 @@
   });
   searchEl.addEventListener("input", renderProducts);
   categoryFilterEl.addEventListener("change", renderProducts);
-  customerCityEl?.addEventListener("change", updateCityRuleNotice);
-  customerCityEl?.addEventListener("change", renderCart);
+  customerCityEl?.addEventListener("change", () => {
+    syncCheckoutNeighborhoodUi();
+    updateCityRuleNotice();
+    renderCart();
+  });
+  customerNeighborhoodEl?.addEventListener("change", renderCart);
   logoutBtnEl.addEventListener("click", async () => {
     await api("logout", { method: "POST", body: "{}" });
     currentUser = null;
@@ -518,6 +598,8 @@
     };
     reader.readAsDataURL(file);
   });
+
+  fillCheckoutNeighborhoodOptions();
 
   async function initPage() {
     try {

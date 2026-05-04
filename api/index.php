@@ -167,11 +167,22 @@ function register_user(PDO $pdo): void
     $email = strtolower(trim((string) ($data['email'] ?? '')));
     $address = trim((string) ($data['address'] ?? ''));
     $city = trim((string) ($data['city'] ?? ''));
+    $neighborhood = trim((string) ($data['neighborhood'] ?? ''));
     $phone = trim((string) ($data['phone'] ?? ''));
     $password = (string) ($data['password'] ?? '');
 
     if ($name === '' || $cpf === '' || $email === '' || $address === '' || $city === '' || $phone === '' || $password === '') {
         json_response(['ok' => false, 'message' => 'Todos os campos são obrigatórios.'], 422);
+    }
+
+    if (is_ilha_solteira_city($city)) {
+        $canonical = canonical_ilha_neighborhood($neighborhood);
+        if ($canonical === null) {
+            json_response(['ok' => false, 'message' => 'Selecione um bairro válido de Ilha Solteira.'], 422);
+        }
+        $neighborhood = $canonical;
+    } else {
+        $neighborhood = '';
     }
 
     $check = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
@@ -181,8 +192,8 @@ function register_user(PDO $pdo): void
     }
 
     $insert = $pdo->prepare(
-        'INSERT INTO users (name, email, password_hash, phone, cpf, address, city, is_admin)
-         VALUES (:name, :email, :password_hash, :phone, :cpf, :address, :city, 0)'
+        'INSERT INTO users (name, email, password_hash, phone, cpf, address, city, neighborhood, is_admin)
+         VALUES (:name, :email, :password_hash, :phone, :cpf, :address, :city, :neighborhood, 0)'
     );
     $insert->execute([
         'name' => $name,
@@ -192,6 +203,7 @@ function register_user(PDO $pdo): void
         'cpf' => $cpf,
         'address' => $address,
         'city' => $city,
+        'neighborhood' => $neighborhood,
     ]);
 
     $_SESSION['user'] = [
@@ -202,6 +214,7 @@ function register_user(PDO $pdo): void
         'cpf' => $cpf,
         'address' => $address,
         'city' => $city,
+        'neighborhood' => $neighborhood,
         'is_admin' => false,
     ];
 
@@ -342,7 +355,8 @@ function create_order(PDO $pdo): void
     $customerName = trim((string) ($data['customer_name'] ?? ''));
     $customerPhone = trim((string) ($data['customer_phone'] ?? ''));
     $customerAddress = trim((string) ($data['customer_address'] ?? ''));
-    $customerCity = trim((string) ($data['customer_city'] ?? ''));
+    $customerCityInput = trim((string) ($data['customer_city'] ?? ''));
+    $customerNeighborhoodInput = trim((string) ($data['customer_neighborhood'] ?? ''));
     $allowedPaymentMethods = ['pix', 'cartao', 'dinheiro'];
 
     if (!is_array($items) || count($items) === 0) {
@@ -351,12 +365,12 @@ function create_order(PDO $pdo): void
     if (!in_array($paymentMethod, $allowedPaymentMethods, true)) {
         json_response(['ok' => false, 'message' => 'Selecione uma forma de pagamento válida (pix, cartao ou dinheiro).'], 422);
     }
-    if ($customerName === '' || $customerPhone === '' || $customerAddress === '' || $customerCity === '') {
+    if ($customerName === '' || $customerPhone === '' || $customerAddress === '' || $customerCityInput === '') {
         json_response(['ok' => false, 'message' => 'Informe nome, telefone, endereço e cidade para finalizar.'], 422);
     }
 
     $currentUser = $_SESSION['user'] ?? null;
-    $cityRequiresRegistration = city_requires_registration($pdo, $customerCity);
+    $cityRequiresRegistration = city_requires_registration($pdo, $customerCityInput);
     if (!$currentUser && $cityRequiresRegistration) {
         json_response(['ok' => false, 'message' => 'Esta cidade exige cadastro. Faça login para continuar.'], 401);
     }
@@ -364,6 +378,20 @@ function create_order(PDO $pdo): void
     $orderUserId = $currentUser
         ? (int) $currentUser['id']
         : guest_user_id($pdo);
+
+    $neighborhoodForOrder = $customerNeighborhoodInput;
+    if (is_ilha_solteira_city($customerCityInput)) {
+        if ($neighborhoodForOrder === '' && $currentUser) {
+            $neighborhoodForOrder = trim((string) ($currentUser['neighborhood'] ?? ''));
+        }
+        $canonical = canonical_ilha_neighborhood($neighborhoodForOrder);
+        if ($canonical === null) {
+            json_response(['ok' => false, 'message' => 'Em Ilha Solteira é obrigatório informar o bairro.'], 422);
+        }
+        $customerCityStored = 'Ilha Solteira — ' . $canonical;
+    } else {
+        $customerCityStored = $customerCityInput;
+    }
 
     $pdo->beginTransaction();
     try {
@@ -390,7 +418,7 @@ function create_order(PDO $pdo): void
             ];
         }
 
-        $shippingFee = calculate_shipping_fee($customerCity, $total);
+        $shippingFee = calculate_shipping_fee($customerCityStored, $total);
         $total += $shippingFee;
 
         $orderStmt = $pdo->prepare(
@@ -403,7 +431,7 @@ function create_order(PDO $pdo): void
             'customer_name' => $customerName,
             'customer_phone' => $customerPhone,
             'customer_address' => $customerAddress,
-            'customer_city' => $customerCity,
+            'customer_city' => $customerCityStored,
             'total_amount' => $total,
             'notes' => $notes,
         ]);
@@ -679,19 +707,79 @@ function normalize_name(string $value): string
     return strtolower(remove_accents(trim($value)));
 }
 
+/** Bairros de Ilha Solteira (entrega com taxa fixa por localidade). */
+function ilha_solteira_neighborhoods(): array
+{
+    return [
+        'Morada do Sol',
+        'Zona Sul',
+        'Zona Norte',
+        'Ipê',
+        'Praia',
+        'Cinturão Verde',
+        'Jardim Aeroporto',
+        'Novo Horizonte',
+        'Ilha do Sol',
+        'Nova Ilha',
+        'Ilha Bela',
+        'Santa Catarina',
+        'Morumbi',
+        'Coabi',
+        'Portal do Bosque',
+    ];
+}
+
+function is_ilha_solteira_city(string $city): bool
+{
+    return normalize_name($city) === 'ilha solteira';
+}
+
+/** Retorna o nome canônico do bairro ou null se inválido. */
+function canonical_ilha_neighborhood(string $neighborhood): ?string
+{
+    $neighborhood = trim($neighborhood);
+    if ($neighborhood === '') {
+        return null;
+    }
+    $needle = normalize_name($neighborhood);
+    foreach (ilha_solteira_neighborhoods() as $allowed) {
+        if (normalize_name($allowed) === $needle) {
+            return $allowed;
+        }
+    }
+
+    return null;
+}
+
 function calculate_shipping_fee(string $customerCity, float $subtotal): float
 {
-    $city = normalize_name($customerCity);
-    $fixedByCity = [
+    $raw = trim($customerCity);
+    $city = normalize_name($raw);
+    if (preg_match('/^ilha\s+solteira\s*[—\-]\s*(.+)$/u', $raw, $matches)) {
+        $city = normalize_name(trim($matches[1]));
+    }
+
+    $fixedByLocality = [
         'praia' => 5.0,
         'morada do sol' => 5.0,
         'recanto das aguas' => 5.0,
         'cinturao verde' => 5.0,
         'ipe' => 8.0,
+        'zona sul' => 5.0,
+        'zona norte' => 5.0,
+        'jardim aeroporto' => 5.0,
+        'novo horizonte' => 5.0,
+        'ilha do sol' => 5.0,
+        'nova ilha' => 5.0,
+        'ilha bela' => 5.0,
+        'santa catarina' => 5.0,
+        'morumbi' => 5.0,
+        'coabi' => 5.0,
+        'portal do bosque' => 5.0,
     ];
 
-    if (isset($fixedByCity[$city])) {
-        return $fixedByCity[$city];
+    if (isset($fixedByLocality[$city])) {
+        return $fixedByLocality[$city];
     }
 
     if ($subtotal < 20.0) {
@@ -711,8 +799,8 @@ function guest_user_id(PDO $pdo): int
     }
 
     $insert = $pdo->prepare(
-        'INSERT INTO users (name, email, password_hash, phone, cpf, address, city, is_admin)
-         VALUES (:name, :email, :password_hash, :phone, :cpf, :address, :city, 0)'
+        'INSERT INTO users (name, email, password_hash, phone, cpf, address, city, neighborhood, is_admin)
+         VALUES (:name, :email, :password_hash, :phone, :cpf, :address, :city, :neighborhood, 0)'
     );
     $insert->execute([
         'name' => 'Visitante',
@@ -722,6 +810,7 @@ function guest_user_id(PDO $pdo): int
         'cpf' => '',
         'address' => '',
         'city' => '',
+        'neighborhood' => '',
     ]);
     return (int) $pdo->lastInsertId();
 }
@@ -755,6 +844,7 @@ function sanitize_user(array $user): array
         'cpf' => (string) ($user['cpf'] ?? ''),
         'address' => (string) ($user['address'] ?? ''),
         'city' => (string) ($user['city'] ?? ''),
+        'neighborhood' => (string) ($user['neighborhood'] ?? ''),
         'payment_method' => (string) ($user['payment_method'] ?? ''),
         'is_admin' => (bool) $user['is_admin'],
     ];

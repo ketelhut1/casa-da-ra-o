@@ -73,6 +73,8 @@ body {
 .auth-nav a { color: var(--brand); text-decoration: none; font-weight: 600; }
 .auth-nav a.secondary { color: var(--muted); }
 
+.hidden { display: none !important; }
+
 @media (max-width: 680px) {
   .auth-card { width: 100%; padding: 1.25rem; }
 }

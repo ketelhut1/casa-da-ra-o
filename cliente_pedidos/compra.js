@@ -13,6 +13,7 @@
   const checkoutBtnEl = document.getElementById("checkoutBtn");
   const customerNameEl = document.getElementById("customerName");
   const customerPhoneEl = document.getElementById("customerPhone");
+  const customerCepEl = document.getElementById("customerCep");
   const customerAddressEl = document.getElementById("customerAddress");
   const customerCityEl = document.getElementById("customerCity");
   const customerNeighborhoodWrapEl = document.getElementById("customerNeighborhoodWrap");
@@ -126,6 +127,25 @@
     return (value || "").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim();
   }
 
+  function onlyDigits(value) {
+    return (value || "").replace(/\D/g, "");
+  }
+
+  function formatCep(value) {
+    const digits = onlyDigits(value).slice(0, 8);
+    if (digits.length <= 5) return digits;
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+
+  function cleanCityName(value) {
+    const raw = (value || "").trim();
+    if (!raw) return "";
+    return raw
+      .replace(/\s*\/\s*[A-Z]{2}$/u, "")
+      .replace(/\s*-\s*[A-Z]{2}$/u, "")
+      .trim();
+  }
+
   function isIlhaSolteiraCity(cityName) {
     return normalizeName(cityName) === ILHA_SOLTEIRA_NORM;
   }
@@ -196,6 +216,59 @@
       cityRuleNoticeEl.textContent = "Esta cidade exige cadastro para concluir o pedido.";
     } else {
       cityRuleNoticeEl.textContent = "Esta cidade permite finalizar como visitante.";
+    }
+  }
+
+  function setCheckoutCityFromCep(cityName) {
+    const cleaned = cleanCityName(cityName);
+    if (!cleaned || !customerCityEl) return false;
+    const normalizedTarget = normalizeName(cleaned);
+    let matched = false;
+    [...customerCityEl.options].forEach((option) => {
+      const isMatch = normalizeName(option.value) === normalizedTarget;
+      option.selected = isMatch;
+      if (isMatch) matched = true;
+    });
+    if (!matched) {
+      const option = document.createElement("option");
+      option.value = cleaned;
+      option.textContent = cleaned;
+      customerCityEl.appendChild(option);
+      customerCityEl.value = cleaned;
+      matched = true;
+    }
+    customerCityEl.disabled = matched;
+    syncCheckoutNeighborhoodUi();
+    updateCityRuleNotice();
+    renderCart();
+    return matched;
+  }
+
+  async function lookupCheckoutCep() {
+    if (!customerCepEl) return;
+    const cep = onlyDigits(customerCepEl.value);
+    if (cep.length !== 8) return;
+    try {
+      setFeedback("Buscando endereço pelo CEP...", false);
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+      if (!response.ok || data?.erro) {
+        throw new Error("CEP não encontrado.");
+      }
+      if (customerAddressEl && data.logradouro) {
+        customerAddressEl.value = data.logradouro;
+      }
+      const cityFilled = setCheckoutCityFromCep(data.localidade || "");
+      if (!cityFilled) {
+        throw new Error("Não foi possível preencher a cidade automaticamente.");
+      }
+      setFeedback("", false);
+    } catch (error) {
+      customerCityEl.disabled = false;
+      syncCheckoutNeighborhoodUi();
+      updateCityRuleNotice();
+      renderCart();
+      setFeedback(error.message || "Não foi possível buscar o CEP.", true);
     }
   }
 
@@ -438,11 +511,12 @@
     }
     const customerName = customerNameEl.value.trim();
     const customerPhone = customerPhoneEl.value.trim();
+    const customerCep = onlyDigits(customerCepEl?.value || "");
     const customerAddress = customerAddressEl.value.trim();
     const customerCity = customerCityEl.value.trim();
     const customerNeighborhood = (customerNeighborhoodEl?.value || "").trim();
-    if (!customerName || !customerPhone || !customerAddress || !customerCity) {
-      setFeedback("Preencha nome, telefone, endereço e cidade.", true);
+    if (!customerName || !customerPhone || customerCep.length !== 8 || !customerAddress || !customerCity) {
+      setFeedback("Preencha nome, telefone, CEP válido, endereço e cidade.", true);
       return;
     }
     if (isIlhaSolteiraCity(customerCity) && !customerNeighborhood) {
@@ -516,6 +590,13 @@
   });
   searchEl.addEventListener("input", renderProducts);
   categoryFilterEl.addEventListener("change", renderProducts);
+  customerCepEl?.addEventListener("input", () => {
+    customerCepEl.value = formatCep(customerCepEl.value);
+    if (onlyDigits(customerCepEl.value).length < 8) {
+      customerCityEl.disabled = false;
+    }
+  });
+  customerCepEl?.addEventListener("blur", lookupCheckoutCep);
   customerCityEl?.addEventListener("change", () => {
     syncCheckoutNeighborhoodUi();
     updateCityRuleNotice();

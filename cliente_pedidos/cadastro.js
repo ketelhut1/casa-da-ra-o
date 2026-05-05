@@ -22,6 +22,8 @@
   const form = document.getElementById("registerForm");
   const feedback = document.getElementById("feedback");
   const notice = document.getElementById("registerNotice");
+  const cepEl = document.getElementById("cep");
+  const addressEl = document.getElementById("address");
   const cityEl = document.getElementById("city");
   const neighborhoodWrap = document.getElementById("neighborhoodWrap");
   const neighborhoodEl = document.getElementById("neighborhood");
@@ -84,8 +86,86 @@
     feedback.classList.toggle("error", Boolean(isError));
   }
 
+  function onlyDigits(value) {
+    return (value || "").replace(/\D/g, "");
+  }
+
+  function formatCep(value) {
+    const digits = onlyDigits(value).slice(0, 8);
+    if (digits.length <= 5) return digits;
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+
+  function cleanCityName(value) {
+    const raw = (value || "").trim();
+    if (!raw) return "";
+    // Garante que fique apenas o nome da cidade (sem UF ou sufixos)
+    // Ex.: "Pereira Barreto - SP" -> "Pereira Barreto"
+    return raw
+      .replace(/\s*\/\s*[A-Z]{2}$/u, "")
+      .replace(/\s*-\s*[A-Z]{2}$/u, "")
+      .trim();
+  }
+
+  function setCityFromCep(cityName) {
+    if (!cityEl) return false;
+    const cleaned = cleanCityName(cityName);
+    if (!cleaned) return false;
+    const normalizedTarget = normalizeName(cleaned);
+    let matched = false;
+    [...cityEl.options].forEach((option) => {
+      const isMatch = normalizeName(option.value) === normalizedTarget;
+      option.selected = isMatch;
+      if (isMatch) matched = true;
+    });
+    if (!matched) {
+      const option = document.createElement("option");
+      option.value = cleaned;
+      option.textContent = cleaned;
+      cityEl.appendChild(option);
+      cityEl.value = cleaned;
+      matched = true;
+    }
+    cityEl.disabled = matched;
+    syncNeighborhoodUi();
+    return matched;
+  }
+
+  async function lookupCep() {
+    if (!cepEl) return;
+    const cep = onlyDigits(cepEl.value);
+    if (cep.length !== 8) return;
+    try {
+      setFeedback("Buscando endereço pelo CEP...", false);
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+      if (!response.ok || data?.erro) {
+        throw new Error("CEP não encontrado.");
+      }
+      if (addressEl && data.logradouro) {
+        addressEl.value = data.logradouro;
+      }
+      const cityFilled = setCityFromCep(data.localidade || "");
+      if (!cityFilled) {
+        throw new Error("Não foi possível preencher a cidade automaticamente.");
+      }
+      setFeedback("", false);
+    } catch (error) {
+      cityEl.disabled = false;
+      syncNeighborhoodUi();
+      setFeedback(error.message || "Não foi possível buscar o CEP.", true);
+    }
+  }
+
   fillNeighborhoodOptions();
   cityEl?.addEventListener("change", syncNeighborhoodUi);
+  cepEl?.addEventListener("input", () => {
+    cepEl.value = formatCep(cepEl.value);
+    if (onlyDigits(cepEl.value).length < 8 && cityEl) {
+      cityEl.disabled = false;
+    }
+  });
+  cepEl?.addEventListener("blur", lookupCep);
 
   async function loadCities() {
     if (!cityEl) return;
@@ -123,22 +203,24 @@
         name: document.getElementById("name").value.trim(),
         cpf: document.getElementById("cpf").value.trim(),
         email: document.getElementById("email").value.trim(),
-        address: document.getElementById("address").value.trim(),
+        address: addressEl?.value.trim() || "",
         city: cityVal,
         neighborhood: isIlhaSolteira(cityVal) ? neighborhoodVal : "",
         phone: document.getElementById("phone").value.trim(),
         password: document.getElementById("password").value,
       };
+      const cepVal = onlyDigits(cepEl?.value || "");
       if (
         !payload.name ||
         !payload.cpf ||
         !payload.email ||
+        cepVal.length !== 8 ||
         !payload.address ||
         !payload.city ||
         !payload.phone ||
         !payload.password
       ) {
-        throw new Error("Todos os campos são obrigatórios.");
+        throw new Error("Preencha todos os campos e informe um CEP válido.");
       }
       if (isIlhaSolteira(cityVal) && !payload.neighborhood) {
         throw new Error("Selecione o bairro em Ilha Solteira.");

@@ -30,6 +30,7 @@
         <button class="nav-btn" data-tab="orders">Pedidos</button>
         <button class="nav-btn" data-tab="products">Produtos</button>
         <button class="nav-btn" data-tab="clients">Clientes</button>
+        <button class="nav-btn" data-tab="reports">Relatórios</button>
         <button class="nav-btn" data-tab="settings">Configurações</button>
       </aside>
 
@@ -113,6 +114,34 @@
         <div id="clientsList" class="cards-list"></div>
       </section>
 
+      <section class="panel tab-panel hidden" id="tab-reports">
+        <div class="section-head">
+          <h3>Relatório de vendas</h3>
+          <button type="button" id="refreshReportsBtn">Atualizar</button>
+        </div>
+        <h4>Vendas por cidade</h4>
+        <div id="salesByCityList" class="cards-list"></div>
+        <h4>Produtos mais vendidos (Top 10)</h4>
+        <div id="topProductsList" class="cards-list"></div>
+
+        <h4>Entrada de estoque por foto da nota</h4>
+        <div class="cards-list">
+          <article class="list-card">
+            <p class="muted">Tire uma foto da nota, o sistema tenta identificar produtos e quantidades. Revise antes de confirmar.</p>
+            <div class="inline-actions">
+              <input id="notePhotoInput" type="file" accept="image/*" capture="environment" />
+              <button type="button" id="scanNoteBtn">Ler nota</button>
+              <button type="button" id="saveStockEntryBtn">Confirmar entrada</button>
+            </div>
+            <label for="noteText" class="muted">Texto da nota (OCR)</label>
+            <textarea id="noteText" rows="6" class="full-width" placeholder="O texto extraído da nota aparecerá aqui..."></textarea>
+            <label for="suggestedEntries" class="muted">Itens sugeridos (formato: CODIGO;QUANTIDADE)</label>
+            <textarea id="suggestedEntries" rows="6" class="full-width" placeholder="Exemplo:&#10;12345;10&#10;A100;4"></textarea>
+            <p id="stockEntryFeedback" class="feedback" aria-live="polite"></p>
+          </article>
+        </div>
+      </section>
+
       <section class="panel tab-panel hidden" id="tab-settings">
         <div class="section-head">
           <h3>Configurações da loja</h3>
@@ -138,6 +167,7 @@
     </main>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -95,6 +95,16 @@ function route(PDO $pdo, string $method, string $endpoint): void
             require_method('GET', $method);
             list_admin_clients($pdo);
             return;
+        case 'admin-sales-report':
+            require_admin();
+            require_method('GET', $method);
+            get_admin_sales_report($pdo);
+            return;
+        case 'admin-stock-entry':
+            require_admin();
+            require_method('POST', $method);
+            create_admin_stock_entry($pdo);
+            return;
         case 'store-settings':
             require_admin();
             if ($method === 'GET') {
@@ -574,6 +584,150 @@ function list_admin_clients(PDO $pdo): void
         ];
     }, $clients);
     json_response(['ok' => true, 'clients' => $clients]);
+}
+
+function get_admin_sales_report(PDO $pdo): void
+{
+    $cityRows = $pdo->query(
+        'SELECT o.customer_city AS city,
+                COUNT(DISTINCT o.id) AS orders_count,
+                COALESCE(SUM(oi.quantity), 0) AS items_sold,
+                COALESCE(SUM(oi.line_total), 0) AS revenue
+         FROM orders o
+         INNER JOIN order_items oi ON oi.order_id = o.id
+         GROUP BY o.customer_city
+         ORDER BY revenue DESC, orders_count DESC, city ASC'
+    )->fetchAll();
+
+    $cities = array_map(static function (array $row): array {
+        return [
+            'city' => (string) ($row['city'] ?? ''),
+            'orders_count' => (int) $row['orders_count'],
+            'items_sold' => (int) $row['items_sold'],
+            'revenue' => (float) $row['revenue'],
+        ];
+    }, $cityRows);
+
+    $productRows = $pdo->query(
+        'SELECT oi.product_id, oi.product_name,
+                COALESCE(SUM(oi.quantity), 0) AS total_quantity,
+                COALESCE(SUM(oi.line_total), 0) AS revenue
+         FROM order_items oi
+         GROUP BY oi.product_id, oi.product_name
+         ORDER BY total_quantity DESC, revenue DESC, oi.product_name ASC
+         LIMIT 10'
+    )->fetchAll();
+
+    $topProducts = array_map(static function (array $row): array {
+        return [
+            'product_id' => (int) ($row['product_id'] ?? 0),
+            'product_name' => (string) ($row['product_name'] ?? ''),
+            'total_quantity' => (int) $row['total_quantity'],
+            'revenue' => (float) $row['revenue'],
+        ];
+    }, $productRows);
+
+    json_response([
+        'ok' => true,
+        'report' => [
+            'cities' => $cities,
+            'top_products' => $topProducts,
+        ],
+    ]);
+}
+
+function create_admin_stock_entry(PDO $pdo): void
+{
+    $data = get_json_input();
+    $items = $data['items'] ?? [];
+    $source = trim((string) ($data['source'] ?? 'nota_foto'));
+    $noteText = trim((string) ($data['note_text'] ?? ''));
+    $adminId = (int) ($_SESSION['user']['id'] ?? 0);
+
+    if (!is_array($items) || count($items) === 0) {
+        json_response(['ok' => false, 'message' => 'Nenhum item informado para entrada de estoque.'], 422);
+    }
+
+    $selectProduct = $pdo->prepare('SELECT id, saldo FROM products WHERE id = :id LIMIT 1');
+    $updateProduct = $pdo->prepare(
+        'UPDATE products
+         SET saldo = :saldo, updated_at = CURRENT_TIMESTAMP
+         WHERE id = :id'
+    );
+    $insertEntry = $pdo->prepare(
+        'INSERT INTO stock_entries (product_id, quantity, source, note_text, created_by)
+         VALUES (:product_id, :quantity, :source, :note_text, :created_by)'
+    );
+
+    $processed = [];
+    $pdo->beginTransaction();
+    try {
+        foreach ($items as $item) {
+            $productId = (int) ($item['product_id'] ?? 0);
+            $quantity = (float) ($item['quantity'] ?? 0);
+            if ($productId <= 0 || $quantity <= 0) {
+                continue;
+            }
+
+            $selectProduct->execute(['id' => $productId]);
+            $product = $selectProduct->fetch();
+            if (!$product) {
+                continue;
+            }
+
+            $currentStock = parse_stock_value((string) ($product['saldo'] ?? '0'));
+            $newStock = $currentStock + $quantity;
+
+            $updateProduct->execute([
+                'id' => $productId,
+                'saldo' => format_stock_value($newStock),
+            ]);
+            $insertEntry->execute([
+                'product_id' => $productId,
+                'quantity' => $quantity,
+                'source' => $source,
+                'note_text' => $noteText,
+                'created_by' => $adminId,
+            ]);
+            $processed[] = [
+                'product_id' => $productId,
+                'quantity' => $quantity,
+                'new_stock' => $newStock,
+            ];
+        }
+
+        if (count($processed) === 0) {
+            throw new RuntimeException('Nenhum item válido encontrado para entrada.');
+        }
+
+        $pdo->commit();
+        json_response([
+            'ok' => true,
+            'message' => 'Entrada de estoque realizada com sucesso.',
+            'entries' => $processed,
+        ]);
+    } catch (Throwable $exception) {
+        $pdo->rollBack();
+        json_response(['ok' => false, 'message' => $exception->getMessage()], 422);
+    }
+}
+
+function parse_stock_value(string $value): float
+{
+    $value = trim($value);
+    if ($value === '' || $value === '-') {
+        return 0.0;
+    }
+    $normalized = str_replace([' ', ','], ['', '.'], $value);
+    return is_numeric($normalized) ? (float) $normalized : 0.0;
+}
+
+function format_stock_value(float $value): string
+{
+    if (abs($value - round($value)) < 0.000001) {
+        return (string) ((int) round($value));
+    }
+    return rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
 }
 
 function get_store_settings(PDO $pdo): void

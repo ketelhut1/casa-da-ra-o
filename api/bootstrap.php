@@ -124,6 +124,20 @@ function create_schema(PDO $pdo): void
     );
 
     $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS stock_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            quantity REAL NOT NULL DEFAULT 0,
+            source TEXT NOT NULL DEFAULT "",
+            note_text TEXT NOT NULL DEFAULT "",
+            created_by INTEGER NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+        )'
+    );
+
+    $pdo->exec(
         'CREATE TABLE IF NOT EXISTS store_settings (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             store_name TEXT NOT NULL DEFAULT "Casa das Rações Isa",

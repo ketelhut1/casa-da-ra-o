@@ -20,6 +20,15 @@
   const refreshClientsBtnEl = document.getElementById("refreshClientsBtn");
   const clientSearchEl = document.getElementById("clientSearch");
   const clientsListEl = document.getElementById("clientsList");
+  const refreshReportsBtnEl = document.getElementById("refreshReportsBtn");
+  const salesByCityListEl = document.getElementById("salesByCityList");
+  const topProductsListEl = document.getElementById("topProductsList");
+  const notePhotoInputEl = document.getElementById("notePhotoInput");
+  const scanNoteBtnEl = document.getElementById("scanNoteBtn");
+  const saveStockEntryBtnEl = document.getElementById("saveStockEntryBtn");
+  const noteTextEl = document.getElementById("noteText");
+  const suggestedEntriesEl = document.getElementById("suggestedEntries");
+  const stockEntryFeedbackEl = document.getElementById("stockEntryFeedback");
   const refreshSettingsBtnEl = document.getElementById("refreshSettingsBtn");
   const settingsFormEl = document.getElementById("settingsForm");
   const settingsFeedbackEl = document.getElementById("settingsFeedback");
@@ -33,6 +42,7 @@
   let products = [];
   let dashboard = null;
   let clients = [];
+  let salesReport = null;
 
   function buildApiUrl(endpoint) {
     const [name, query = ""] = endpoint.split("?");
@@ -62,6 +72,11 @@
   function setSettingsFeedback(message, isError) {
     settingsFeedbackEl.textContent = message || "";
     settingsFeedbackEl.classList.toggle("error", Boolean(isError));
+  }
+
+  function setStockEntryFeedback(message, isError) {
+    stockEntryFeedbackEl.textContent = message || "";
+    stockEntryFeedbackEl.classList.toggle("error", Boolean(isError));
   }
 
   function humanStatus(status) {
@@ -272,6 +287,49 @@
     });
   }
 
+  function renderSalesReport() {
+    const cities = salesReport && Array.isArray(salesReport.cities) ? salesReport.cities : [];
+    const topProducts = salesReport && Array.isArray(salesReport.top_products) ? salesReport.top_products : [];
+
+    if (!cities.length) {
+      salesByCityListEl.innerHTML = '<p class="empty-message">Sem vendas registradas por cidade.</p>';
+    } else {
+      salesByCityListEl.innerHTML = "";
+      cities.forEach((cityData) => {
+        const card = document.createElement("article");
+        card.className = "list-card";
+        card.innerHTML = `
+          <div class="section-head">
+            <strong>${escapeHtml(cityData.city || "Não informada")}</strong>
+            <span class="status status-concluido">${cityData.orders_count} pedido(s)</span>
+          </div>
+          <div class="muted">Itens vendidos: ${cityData.items_sold}</div>
+          <div><strong>Faturamento:</strong> ${formatMoney(cityData.revenue)}</div>
+        `;
+        salesByCityListEl.appendChild(card);
+      });
+    }
+
+    if (!topProducts.length) {
+      topProductsListEl.innerHTML = '<p class="empty-message">Sem dados de produtos vendidos.</p>';
+      return;
+    }
+
+    topProductsListEl.innerHTML = "";
+    topProducts.forEach((product, index) => {
+      const card = document.createElement("article");
+      card.className = "list-card";
+      card.innerHTML = `
+        <div class="section-head">
+          <strong>${index + 1}. ${escapeHtml(product.product_name || "Produto sem nome")}</strong>
+          <span class="status status-concluido">${product.total_quantity} un.</span>
+        </div>
+        <div><strong>Faturamento:</strong> ${formatMoney(product.revenue)}</div>
+      `;
+      topProductsListEl.appendChild(card);
+    });
+  }
+
   function citiesToText(cities) {
     return (cities || []).map((city) => {
       const suffix = city.require_registration ? "|obrigatorio" : "";
@@ -294,6 +352,116 @@
         };
       })
       .filter((city) => city.name);
+  }
+
+  function findQuantityInLine(line) {
+    const matches = String(line).match(/\d+(?:[.,]\d+)?/g);
+    if (!matches || !matches.length) {
+      return 0;
+    }
+    const last = matches[matches.length - 1].replace(",", ".");
+    const value = Number(last);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
+  function tokenizeProductText(value) {
+    return normalize(value)
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3);
+  }
+
+  function scoreDescriptionMatch(lineTokens, productTokens) {
+    if (!lineTokens.length || !productTokens.length) {
+      return 0;
+    }
+    const lineSet = new Set(lineTokens);
+    let common = 0;
+    productTokens.forEach((token) => {
+      if (lineSet.has(token)) {
+        common += 1;
+      }
+    });
+    return common;
+  }
+
+  function inferEntriesFromNoteText(rawText) {
+    const text = String(rawText || "");
+    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const picked = new Map();
+    const productsWithTokens = products.map((product) => ({
+      product,
+      code: normalize(product.codigo),
+      tokens: tokenizeProductText(`${product.descricao} ${product.codigo}`),
+    }));
+
+    lines.forEach((line) => {
+      const normalizedLine = normalize(line);
+      const quantity = findQuantityInLine(line);
+      if (!quantity) {
+        return;
+      }
+
+      let matchedProduct = null;
+      const byCode = productsWithTokens.find((entry) => entry.code && normalizedLine.includes(entry.code));
+      if (byCode) {
+        matchedProduct = byCode.product;
+      } else {
+        const lineTokens = tokenizeProductText(line);
+        let best = null;
+        productsWithTokens.forEach((entry) => {
+          const score = scoreDescriptionMatch(lineTokens, entry.tokens);
+          if (score >= 2 && (!best || score > best.score)) {
+            best = { score, product: entry.product };
+          }
+        });
+        if (best) {
+          matchedProduct = best.product;
+        }
+      }
+
+      if (!matchedProduct) {
+        return;
+      }
+
+      const prev = picked.get(matchedProduct.codigo) || 0;
+      picked.set(matchedProduct.codigo, prev + quantity);
+    });
+
+    const rows = Array.from(picked.entries()).map(([code, quantity]) => `${code};${quantity}`);
+    suggestedEntriesEl.value = rows.join("\n");
+    if (!rows.length) {
+      setStockEntryFeedback("Nenhum item foi identificado automaticamente. Você pode preencher manualmente.", true);
+    } else {
+      setStockEntryFeedback(`Foram sugeridos ${rows.length} item(ns). Revise antes de confirmar.`, false);
+    }
+  }
+
+  function parseSuggestedEntries() {
+    const lines = String(suggestedEntriesEl.value || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const items = [];
+    lines.forEach((line) => {
+      const [rawCode, rawQty] = line.split(";");
+      const code = (rawCode || "").trim();
+      const qtyValue = Number(String(rawQty || "0").replace(",", "."));
+      if (!code || !Number.isFinite(qtyValue) || qtyValue <= 0) {
+        return;
+      }
+      const product = products.find((entry) => normalize(entry.codigo) === normalize(code));
+      if (!product) {
+        return;
+      }
+      items.push({
+        product_id: product.id,
+        quantity: qtyValue,
+      });
+    });
+    return items;
   }
 
   async function loadSession() {
@@ -333,6 +501,12 @@
     renderClients();
   }
 
+  async function loadSalesReport() {
+    const data = await api("admin-sales-report");
+    salesReport = data.report;
+    renderSalesReport();
+  }
+
   async function loadSettings() {
     const data = await api("store-settings");
     const settings = data.settings;
@@ -358,6 +532,7 @@
   refreshOrdersBtnEl.addEventListener("click", () => loadOrders().catch((error) => setProductFeedback(error.message, true)));
   refreshProductsBtnEl.addEventListener("click", () => loadProducts().catch((error) => setProductFeedback(error.message, true)));
   refreshClientsBtnEl.addEventListener("click", () => loadClients().catch((error) => setProductFeedback(error.message, true)));
+  refreshReportsBtnEl.addEventListener("click", () => loadSalesReport().catch((error) => setProductFeedback(error.message, true)));
   refreshSettingsBtnEl.addEventListener("click", () => loadSettings().catch((error) => setSettingsFeedback(error.message, true)));
   resetFormBtnEl.addEventListener("click", resetProductForm);
   productSearchEl.addEventListener("input", renderProducts);
@@ -409,11 +584,55 @@
     }
   });
 
+  scanNoteBtnEl.addEventListener("click", async () => {
+    try {
+      setStockEntryFeedback("", false);
+      const file = notePhotoInputEl.files && notePhotoInputEl.files[0];
+      if (!file) {
+        setStockEntryFeedback("Selecione ou tire uma foto da nota antes de ler.", true);
+        return;
+      }
+      if (!window.Tesseract || typeof window.Tesseract.recognize !== "function") {
+        setStockEntryFeedback("OCR indisponível no momento.", true);
+        return;
+      }
+      setStockEntryFeedback("Lendo nota... isso pode levar alguns segundos.", false);
+      const result = await window.Tesseract.recognize(file, "por");
+      const text = result && result.data && result.data.text ? result.data.text : "";
+      noteTextEl.value = text;
+      inferEntriesFromNoteText(text);
+    } catch (error) {
+      setStockEntryFeedback(error.message || "Falha ao ler a nota.", true);
+    }
+  });
+
+  saveStockEntryBtnEl.addEventListener("click", async () => {
+    try {
+      const items = parseSuggestedEntries();
+      if (!items.length) {
+        setStockEntryFeedback("Nenhum item válido para entrada. Use o formato CODIGO;QUANTIDADE.", true);
+        return;
+      }
+      await api("admin-stock-entry", {
+        method: "POST",
+        body: JSON.stringify({
+          source: "nota_foto",
+          note_text: noteTextEl.value || "",
+          items,
+        }),
+      });
+      setStockEntryFeedback("Entrada de estoque concluída com sucesso.", false);
+      await Promise.all([loadProducts(), loadSalesReport()]);
+    } catch (error) {
+      setStockEntryFeedback(error.message, true);
+    }
+  });
+
   loadSession()
     .then((isOk) => {
       if (!isOk) return null;
       switchTab("dashboard");
-      return Promise.all([loadDashboard(), loadOrders(), loadProducts(), loadClients(), loadSettings()]);
+      return Promise.all([loadDashboard(), loadOrders(), loadProducts(), loadClients(), loadSalesReport(), loadSettings()]);
     })
     .catch(() => {
       window.location.href = "./login.html";

@@ -20,6 +20,15 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="cartShortcutBtn" type="button" class="cart-shortcut" aria-label="Ir para o carrinho">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="9" cy="20" r="1.6"></circle>
+            <circle cx="17" cy="20" r="1.6"></circle>
+            <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.5L21 8H6"></path>
+          </svg>
+          <span class="cart-shortcut-label">Carrinho</span>
+          <span id="cartShortcutCount" class="cart-shortcut-count hidden">0</span>
+        </button>
         <span id="userBox">Visitante</span>
         <button id="logoutBtn" class="hidden" type="button">Sair</button>
       </div>
@@ -45,7 +54,7 @@
     </section>
 
     <aside class="side">
-      <section class="panel">
+      <section class="panel" id="cartSection">
         <div class="panel-head">
           <h3>Carrinho</h3>
           <button id="clearCartBtn" type="button">Limpar</button>

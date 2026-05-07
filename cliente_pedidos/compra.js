@@ -25,6 +25,9 @@
   const refreshOrdersBtnEl = document.getElementById("refreshOrdersBtn");
   const userBoxEl = document.getElementById("userBox");
   const logoutBtnEl = document.getElementById("logoutBtn");
+  const cartShortcutBtnEl = document.getElementById("cartShortcutBtn");
+  const cartShortcutCountEl = document.getElementById("cartShortcutCount");
+  const cartSectionEl = document.getElementById("cartSection");
   const feedbackEl = document.getElementById("feedback");
   const authNoticeEl = document.getElementById("authNotice");
   const adminPanelEl = document.getElementById("adminPanel");
@@ -344,7 +347,19 @@
     renderCart();
   }
 
+  function updateCartShortcut() {
+    if (!cartShortcutCountEl) return;
+    const totalQty = cart.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    if (totalQty > 0) {
+      cartShortcutCountEl.textContent = String(totalQty);
+      cartShortcutCountEl.classList.remove("hidden");
+    } else {
+      cartShortcutCountEl.classList.add("hidden");
+    }
+  }
+
   function renderCart() {
+    updateCartShortcut();
     if (!cart.length) {
       cartItemsEl.innerHTML = '<p class="muted">Carrinho vazio.</p>';
       cartTotalEl.textContent = "Total: R$ 0,00";
@@ -580,6 +595,11 @@
     cart = [];
     saveCart();
     renderCart();
+  });
+  cartShortcutBtnEl?.addEventListener("click", () => {
+    cartSectionEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+    cartSectionEl?.classList.add("highlight-order");
+    setTimeout(() => cartSectionEl?.classList.remove("highlight-order"), 1400);
   });
   searchEl.addEventListener("input", renderProducts);
   categoryFilterEl.addEventListener("change", renderProducts);

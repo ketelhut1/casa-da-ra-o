@@ -48,6 +48,7 @@
     "Ipê",
     "Praia",
     "Cinturão Verde",
+    "Recanto das Águas",
     "Jardim Aeroporto",
     "Novo Horizonte",
     "Ilha do Sol",
@@ -58,23 +59,13 @@
     "Coabi",
     "Portal do Bosque",
   ];
+  // Bairros com taxa fixa. Os demais seguem a regra geral (R$ 2,50 se subtotal < R$ 20, senão default_shipping).
   const FIXED_LOCALITY_SHIPPING = {
     praia: 5,
     "morada do sol": 5,
     "recanto das aguas": 5,
     "cinturao verde": 5,
     ipe: 8,
-    "zona sul": 5,
-    "zona norte": 5,
-    "jardim aeroporto": 5,
-    "novo horizonte": 5,
-    "ilha do sol": 5,
-    "nova ilha": 5,
-    "ilha bela": 5,
-    "santa catarina": 5,
-    morumbi: 5,
-    coabi: 5,
-    "portal do bosque": 5,
   };
 
   let currentUser = null;
@@ -147,7 +138,7 @@
   }
 
   function isIlhaSolteiraCity(cityName) {
-    return normalizeName(cityName) === ILHA_SOLTEIRA_NORM;
+    return normalizeName(cleanCityName(cityName)) === ILHA_SOLTEIRA_NORM;
   }
 
   function fillCheckoutNeighborhoodOptions() {
@@ -183,7 +174,9 @@
     if (key && Object.prototype.hasOwnProperty.call(FIXED_LOCALITY_SHIPPING, key)) {
       return FIXED_LOCALITY_SHIPPING[key];
     }
-    return subtotal < 20 ? 2.5 : 0;
+    if (subtotal < 20) return 2.5;
+    const fallback = Number(storeSettings?.default_shipping);
+    return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
   }
 
   function humanStatus(status) {

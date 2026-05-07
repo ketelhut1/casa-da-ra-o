@@ -428,7 +428,8 @@ function create_order(PDO $pdo): void
             ];
         }
 
-        $shippingFee = calculate_shipping_fee($customerCityStored, $total);
+        $defaultShipping = get_default_shipping_fee($pdo);
+        $shippingFee = calculate_shipping_fee($customerCityStored, $total, $defaultShipping);
         $total += $shippingFee;
 
         $orderStmt = $pdo->prepare(
@@ -496,6 +497,7 @@ function list_admin_orders(PDO $pdo): void
 {
     $status = trim((string) ($_GET['status'] ?? ''));
     $sql = 'SELECT o.id, o.status, o.payment_method, o.total_amount, o.notes, o.created_at,
+                   o.customer_name, o.customer_phone, o.customer_address, o.customer_city,
                    u.name AS user_name, u.email AS user_email, u.phone AS user_phone
             FROM orders o
             INNER JOIN users u ON u.id = o.user_id';
@@ -513,6 +515,10 @@ function list_admin_orders(PDO $pdo): void
 
     foreach ($orders as &$order) {
         $order['total_amount'] = (float) $order['total_amount'];
+        $order['customer_name'] = (string) ($order['customer_name'] !== '' ? $order['customer_name'] : ($order['user_name'] ?? ''));
+        $order['customer_phone'] = (string) ($order['customer_phone'] !== '' ? $order['customer_phone'] : ($order['user_phone'] ?? ''));
+        $order['customer_address'] = (string) ($order['customer_address'] ?? '');
+        $order['customer_city'] = (string) ($order['customer_city'] ?? '');
         $order['items'] = order_items($pdo, (int) $order['id']);
     }
 
@@ -858,10 +864,26 @@ function city_requires_registration(PDO $pdo, string $city): bool
 
 function normalize_name(string $value): string
 {
+    // remove_accents trata maiúsculas e minúsculas acentuadas; strtolower lida com o que sobra (ASCII).
     return strtolower(remove_accents(trim($value)));
 }
 
-/** Bairros de Ilha Solteira (entrega com taxa fixa por localidade). */
+/**
+ * Remove sufixos de UF (ex.: " - SP", "/MS", " — RJ") do final do nome da cidade.
+ * Mantém o restante intacto para que comparações por nome sejam estáveis,
+ * independentemente de o admin cadastrar a cidade com ou sem o estado.
+ */
+function clean_city_name(string $city): string
+{
+    $value = trim($city);
+    if ($value === '') {
+        return '';
+    }
+    $cleaned = preg_replace('#\s*[/\-–—]\s*[A-Za-z]{2}\s*$#u', '', $value);
+    return trim((string) ($cleaned ?? $value));
+}
+
+/** Bairros de Ilha Solteira oferecidos no cadastro/checkout. */
 function ilha_solteira_neighborhoods(): array
 {
     return [
@@ -871,6 +893,7 @@ function ilha_solteira_neighborhoods(): array
         'Ipê',
         'Praia',
         'Cinturão Verde',
+        'Recanto das Águas',
         'Jardim Aeroporto',
         'Novo Horizonte',
         'Ilha do Sol',
@@ -885,7 +908,7 @@ function ilha_solteira_neighborhoods(): array
 
 function is_ilha_solteira_city(string $city): bool
 {
-    return normalize_name($city) === 'ilha solteira';
+    return normalize_name(clean_city_name($city)) === 'ilha solteira';
 }
 
 /** Retorna o nome canônico do bairro ou null se inválido. */
@@ -905,31 +928,32 @@ function canonical_ilha_neighborhood(string $neighborhood): ?string
     return null;
 }
 
-function calculate_shipping_fee(string $customerCity, float $subtotal): float
+function get_default_shipping_fee(PDO $pdo): float
 {
-    $raw = trim($customerCity);
+    $value = $pdo->query('SELECT default_shipping FROM store_settings WHERE id = 1')->fetchColumn();
+    if ($value === false || $value === null) {
+        return 0.0;
+    }
+    $fee = (float) $value;
+    return $fee > 0.0 ? $fee : 0.0;
+}
+
+function calculate_shipping_fee(string $customerCity, float $subtotal, float $defaultFee = 0.0): float
+{
+    $raw = clean_city_name($customerCity);
     $city = normalize_name($raw);
-    if (preg_match('/^ilha\s+solteira\s*[—\-]\s*(.+)$/u', $raw, $matches)) {
+    if (preg_match('/^ilha\s+solteira\s*[—\-]\s*(.+)$/iu', $raw, $matches)) {
         $city = normalize_name(trim($matches[1]));
     }
 
+    // Apenas estes bairros têm taxa fixa de entrega.
+    // Os demais bairros de Ilha Solteira seguem a regra geral (R$ 2,50 se subtotal < R$ 20, senão default_shipping).
     $fixedByLocality = [
         'praia' => 5.0,
         'morada do sol' => 5.0,
         'recanto das aguas' => 5.0,
         'cinturao verde' => 5.0,
         'ipe' => 8.0,
-        'zona sul' => 5.0,
-        'zona norte' => 5.0,
-        'jardim aeroporto' => 5.0,
-        'novo horizonte' => 5.0,
-        'ilha do sol' => 5.0,
-        'nova ilha' => 5.0,
-        'ilha bela' => 5.0,
-        'santa catarina' => 5.0,
-        'morumbi' => 5.0,
-        'coabi' => 5.0,
-        'portal do bosque' => 5.0,
     ];
 
     if (isset($fixedByLocality[$city])) {
@@ -940,7 +964,7 @@ function calculate_shipping_fee(string $customerCity, float $subtotal): float
         return 2.5;
     }
 
-    return 0.0;
+    return $defaultFee;
 }
 
 function guest_user_id(PDO $pdo): int

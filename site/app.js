@@ -90,6 +90,15 @@
     return map[status] || status;
   }
 
+  function humanPayment(method) {
+    const map = {
+      pix: "PIX",
+      cartao: "Cartão",
+      dinheiro: "Dinheiro",
+    };
+    return map[method] || method || "-";
+  }
+
   function escapeHtml(text) {
     const div = document.createElement("div");
     div.textContent = text || "";
@@ -147,16 +156,24 @@
       const itemsHtml = order.items
         .map((item) => `<li>${escapeHtml(item.product_name)} x${item.quantity} - ${formatMoney(item.line_total)}</li>`)
         .join("");
+      const customerName = order.customer_name || order.user_name || "-";
+      const customerPhone = order.customer_phone || order.user_phone || "-";
+      const customerCity = order.customer_city || "-";
+      const customerAddress = order.customer_address || "-";
+      const paymentLabel = humanPayment(order.payment_method);
 
       card.innerHTML = `
         <div class="section-head">
           <div>
             <strong>Pedido #${order.id}</strong>
-            <div class="muted">${escapeHtml(order.user_name)} • ${escapeHtml(order.user_email)} • ${escapeHtml(order.user_phone || "-")}</div>
+            <div class="muted">${escapeHtml(customerName)} • ${escapeHtml(customerPhone)}</div>
+            <div class="muted">Conta: ${escapeHtml(order.user_name || "-")} • ${escapeHtml(order.user_email || "-")}</div>
           </div>
           <span class="status status-${order.status}">${humanStatus(order.status)}</span>
         </div>
         <div class="muted">${new Date(order.created_at.replace(" ", "T")).toLocaleString("pt-BR")}</div>
+        <p><strong>Entrega:</strong> ${escapeHtml(customerCity)} — ${escapeHtml(customerAddress)}</p>
+        <p><strong>Pagamento:</strong> ${escapeHtml(paymentLabel)}</p>
         <ul>${itemsHtml}</ul>
         <p><strong>Total:</strong> ${formatMoney(order.total_amount)}</p>
         <p><strong>Observações:</strong> ${escapeHtml(order.notes || "-")}</p>

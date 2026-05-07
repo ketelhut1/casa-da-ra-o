@@ -8,6 +8,7 @@
     "Ipê",
     "Praia",
     "Cinturão Verde",
+    "Recanto das Águas",
     "Jardim Aeroporto",
     "Novo Horizonte",
     "Ilha do Sol",
@@ -38,7 +39,7 @@
   }
 
   function isIlhaSolteira(cityName) {
-    return normalizeName(cityName) === ILHA_SOLTEIRA_NORM;
+    return normalizeName(cleanCityName(cityName)) === ILHA_SOLTEIRA_NORM;
   }
 
   function fillNeighborhoodOptions() {

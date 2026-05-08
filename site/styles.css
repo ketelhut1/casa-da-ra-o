@@ -216,6 +216,20 @@ button {
   width: auto;
 }
 
+.image-preview-wrap {
+  display: grid;
+  gap: 0.5rem;
+}
+
+#productImagePreview {
+  width: min(100%, 260px);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #fffdfa;
+}
+
 .status {
   border-radius: 999px;
   padding: 0.28rem 0.75rem;

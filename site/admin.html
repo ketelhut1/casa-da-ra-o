@@ -80,6 +80,12 @@
           <input id="total" type="text" />
           <label for="imageUrl">URL da imagem</label>
           <input id="imageUrl" type="url" />
+          <label for="imageFile">Upload da imagem (computador)</label>
+          <input id="imageFile" type="file" accept="image/*" />
+          <div id="imagePreviewWrap" class="full-width image-preview-wrap hidden">
+            <span class="muted">Pré-visualização da imagem</span>
+            <img id="productImagePreview" alt="Pré-visualização da imagem do produto" />
+          </div>
           <label for="categoria">Categoria</label>
           <select id="categoria">
             <option value="cao">Cães</option>

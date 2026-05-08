@@ -17,6 +17,10 @@
   const productSearchEl = document.getElementById("productSearch");
   const productsListEl = document.getElementById("productsList");
   const productFeedbackEl = document.getElementById("productFeedback");
+  const imageUrlEl = document.getElementById("imageUrl");
+  const imageFileEl = document.getElementById("imageFile");
+  const imagePreviewWrapEl = document.getElementById("imagePreviewWrap");
+  const productImagePreviewEl = document.getElementById("productImagePreview");
   const refreshClientsBtnEl = document.getElementById("refreshClientsBtn");
   const clientSearchEl = document.getElementById("clientSearch");
   const clientsListEl = document.getElementById("clientsList");
@@ -132,7 +136,11 @@
     document.getElementById("custo").value = String(product.custo_unit ?? "").replace(".", ",");
     document.getElementById("saldo").value = product.saldo || "";
     document.getElementById("total").value = product.total || "";
-    document.getElementById("imageUrl").value = product.image_url || "";
+    imageUrlEl.value = product.image_url || "";
+    updateImagePreview(imageUrlEl.value);
+    if (imageFileEl) {
+      imageFileEl.value = "";
+    }
     document.getElementById("categoria").value = product.categoria || "outro";
     document.getElementById("ativo").checked = Boolean(product.ativo);
   }
@@ -141,6 +149,24 @@
     productFormEl.reset();
     document.getElementById("productId").value = "";
     document.getElementById("ativo").checked = true;
+    updateImagePreview("");
+    if (imageFileEl) {
+      imageFileEl.value = "";
+    }
+  }
+
+  function updateImagePreview(imageUrl) {
+    const value = String(imageUrl || "").trim();
+    if (!imagePreviewWrapEl || !productImagePreviewEl) {
+      return;
+    }
+    if (!value) {
+      productImagePreviewEl.removeAttribute("src");
+      imagePreviewWrapEl.classList.add("hidden");
+      return;
+    }
+    productImagePreviewEl.src = value;
+    imagePreviewWrapEl.classList.remove("hidden");
   }
 
   function renderOrders(orders) {
@@ -567,7 +593,7 @@
         custo_unit: document.getElementById("custo").value.trim(),
         saldo: document.getElementById("saldo").value.trim(),
         total: document.getElementById("total").value.trim(),
-        image_url: document.getElementById("imageUrl").value.trim(),
+        image_url: imageUrlEl.value.trim(),
         categoria: document.getElementById("categoria").value,
         ativo: document.getElementById("ativo").checked,
       };
@@ -578,6 +604,37 @@
     } catch (error) {
       setProductFeedback(error.message, true);
     }
+  });
+
+  imageFileEl?.addEventListener("change", () => {
+    const file = imageFileEl.files && imageFileEl.files[0];
+    if (!file) {
+      return;
+    }
+    if (!file.type || !file.type.startsWith("image/")) {
+      setProductFeedback("Selecione um arquivo de imagem válido.", true);
+      imageFileEl.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      imageUrlEl.value = String(reader.result || "");
+      updateImagePreview(imageUrlEl.value);
+      setProductFeedback("Imagem carregada do computador.", false);
+    };
+    reader.onerror = () => {
+      setProductFeedback("Não foi possível ler a imagem selecionada.", true);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  imageUrlEl?.addEventListener("input", () => {
+    updateImagePreview(imageUrlEl.value);
+  });
+
+  productImagePreviewEl?.addEventListener("error", () => {
+    productImagePreviewEl.removeAttribute("src");
+    imagePreviewWrapEl?.classList.add("hidden");
   });
 
   settingsFormEl.addEventListener("submit", async (event) => {
